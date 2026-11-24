@@ -2,6 +2,7 @@ import { ACTIVITIES, CHOICES } from "./content.js";
 import { createGame, move, completeActivity, nextTurn, continueGame, finishGame, undo } from "./game-engine.js";
 import { icon } from "./icons.js";
 import { createSoundEffects } from "./sound-effects.js";
+import { createBackgroundMusic } from "./background-music.js";
 
 const $ = (id) => document.getElementById(id);
 const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (c) => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
@@ -15,7 +16,7 @@ const tileColors = [
   ["#c5e9ff","#226b9c"],["#ffe08a","#9a5900"],["#e0ceff","#7143b0"],
   ["#bfeebd","#237643"],["#b9edee","#146e7b"],["#e0ceff","#7143b0"],["#ffe56b","#8a5b00"]
 ];
-const defaultSettings = () => ({ edits:{}, videoUrl:"", effectsEnabled:true });
+const defaultSettings = () => ({ edits:{}, videoUrl:"", effectsEnabled:true, bgmVolume:0.15 });
 function readJson(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }
 function validWebUrl(value) { if (!value) return false; try { return new URL(value).protocol === "https:"; } catch { return false; } }
 function normalizeSettings(saved) {
@@ -33,6 +34,7 @@ function normalizeSettings(saved) {
   }
   if (validWebUrl(saved.videoUrl)) base.videoUrl = saved.videoUrl;
   base.effectsEnabled = saved.effectsEnabled !== false;
+  if (typeof saved.bgmVolume === "number" && Number.isFinite(saved.bgmVolume)) base.bgmVolume = Math.max(0,Math.min(1,saved.bgmVolume));
   return base;
 }
 const savedSettings = readJson(SETTINGS_KEY);
@@ -57,6 +59,10 @@ try {
 let busy = false, animatedPosition = null, movementProgress = null, modal = null, previewSelection = {};
 let settingsDraft = null, settingsTab = "activities", editId = 1, toastTimer, lastDialogFocus, soundRequest = 0;
 const activityDialog = $("activity-dialog"), teacherDialog = $("teacher-dialog");
+const music = createBackgroundMusic({
+  audio:$("bgm-audio"), volume:settings.bgmVolume,
+  onStateChange:state=>renderMusicButtons(state), onError:message=>toast(message)
+});
 
 function activity(id) {
   const base = ACTIVITIES[id-1] || ACTIVITIES[0], edit = settings.edits[id] || {};
@@ -82,7 +88,7 @@ function playActionSound(effect) {
   void sounds.unlock().then(ready => { if (ready && !document.hidden) effect(); });
 }
 function closeActivity() { activityDialog.close(); modal=null; }
-function closeTeacher() { teacherDialog.close(); settingsDraft=null; }
+function closeTeacher() { teacherDialog.close(); settingsDraft=null; music.setVolume(settings.bgmVolume); }
 function openActivityDialog() {
   if (!activityDialog.open) { lastDialogFocus=document.activeElement; activityDialog.showModal(); }
 }
@@ -139,6 +145,23 @@ function render() {
   $("help-button").disabled=busy;
   $("settings-button").disabled=busy;
   renderSoundButton();
+  renderMusicButtons();
+}
+function musicButtonMarkup() {
+  return '<button class="bgm-button compact" data-bgm-toggle aria-label="BGMを再生" aria-pressed="false"><span aria-hidden="true">♪</span><span>BGM 再生</span></button>';
+}
+function musicCreditsMarkup() {
+  return '<section class="bgm-credits" aria-labelledby="bgm-credits-title"><h3 id="bgm-credits-title">曲とライセンス</h3><p>"Carefree" Kevin MacLeod (<a href="https://incompetech.com/" target="_blank" rel="noopener noreferrer">incompetech.com</a>)<br>Licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">Creative Commons: By Attribution 4.0 License</a></p><p><a href="https://incompetech.com/music/royalty-free/index.html?Search=Search&amp;isrc=USUAN1400037" target="_blank" rel="noopener noreferrer">曲の配布ページ</a> · <a href="./licenses/Carefree-attribution.txt" target="_blank" rel="noopener noreferrer">クレジット全文</a></p><p>音源ファイルは未編集です。アプリで音量調整・くり返し再生をしています。</p></section>';
+}
+function renderMusicButtons(state=music.getState()) {
+  const active=state.playing||state.pending;
+  const label=state.pending?"BGM 読込中":state.playing?"BGM 停止":"BGM 再生";
+  document.querySelectorAll("[data-bgm-toggle]").forEach(button=>{
+    button.innerHTML=icon("music",22)+'<span>'+label+'</span>';
+    button.setAttribute("aria-pressed",String(active));
+    button.setAttribute("aria-label",active?"BGMを一時停止":"BGMを再生");
+    button.title=active?"BGMを一時停止":"BGMを再生";
+  });
 }
 function renderSoundButton() {
   const label="効果音 "+(settings.effectsEnabled?"オン":"オフ");
@@ -241,7 +264,7 @@ function renderActivity() {
   const item=activity(modal.id),sel=getSelection(),preview=modal.preview,oldScroll=activityDialog.scrollTop;
   activityDialog.classList.toggle("goal-dialog",item.category==="goal");
   const badge=preview?"マスの しょうかい":item.category==="pair"?"ともだちと やってみよう":"みんなで やってみよう";
-  const top='<div class="dialog-top"><span class="dialog-badge">'+icon(item.category==="pair"?"people":"star",19)+badge+' · '+item.id+'マスめ</span><button class="close-button" data-action="close-activity" aria-label="ボードにもどる">'+icon("close",18)+'</button></div>';
+  const top='<div class="dialog-top"><span class="dialog-badge">'+icon(item.category==="pair"?"people":"star",19)+badge+' · '+item.id+'マスめ</span><div class="dialog-tools">'+musicButtonMarkup()+'<button class="close-button" data-action="close-activity" aria-label="ボードにもどる">'+icon("close",18)+'</button></div></div>';
   if(item.category==="goal") {
     const heading=settings.edits[item.id]?.title?escapeHtml(item.title):"ゴール！<br>みんなで バンザイ！";
     const goalText=settings.edits[item.id]?.studentText?escapeHtml(item.studentText):"いっしょに ゴールできたね！";
@@ -254,6 +277,7 @@ function renderActivity() {
       '<details class="teacher-hint"><summary>先生のヒント・準備物</summary><p>'+escapeHtml(item.teacherHint)+'</p><p class="materials">準備物：'+escapeHtml(item.materials.join("、")||"なし")+'</p><p>カードは必要なときに使います。言葉や身振りで選んだ場合も、そのまま活動を進められます。</p></details></div><div class="activity-footer"><button class="primary-button" data-action="'+(preview?"close-activity":"activity-complete")+'">'+(preview?"ボードに もどる":"かつどう おわり")+'</button></div>';
   }
   activityDialog.scrollTop=oldScroll;
+  renderMusicButtons();
 }
 function finishActivity() {
   if (game.phase!=="activity" || modal?.preview) return;
@@ -269,19 +293,20 @@ function showCheckpoint() {
   openActivityDialog();
 }
 function showEnding() {
+  music.pause({reset:true});
   modal={type:"ending"};activityDialog.classList.add("goal-dialog");
   const titles=[...new Set(game.turns.filter(t=>t.completed).map(t=>activity(t.to).shortTitle))];
   activityDialog.innerHTML='<div class="dialog-top"><span class="dialog-badge">きょうの すごろく おしまい</span><button class="close-button" data-action="close-activity" aria-label="ボードにもどる">'+icon("close",18)+'</button></div><div class="celebration">'+confetti()+'<img class="celebration-img" src="./assets/kadotan.png" alt="カドタンもバンザイ" width="145" height="188"><h2 id="activity-title">みんなで できた！</h2><p>ともだちと いっしょに がんばったね。<br>みんなで はくしゅ！</p>'+(titles.length?'<div class="recap-chips">'+titles.map(t=>'<span>'+escapeHtml(t)+'</span>').join("")+'</div>':'')+'<div class="celebration-actions">'+(settings.videoUrl?'<a class="primary-button button-link" href="'+escapeHtml(settings.videoUrl)+'" target="_blank" rel="noopener noreferrer">'+icon("play",20)+'たいそうを はじめる</a>':'')+'<button class="secondary-button" data-action="close-activity">ボードに もどる</button><button class="secondary-button" data-action="restart">もういちど あそぶ</button></div></div>';
   openActivityDialog();
 }
 function endGame() { game=finishGame(game);saveProgress();closeActivity();render();showEnding();playActionSound(()=>sounds.playGoal()); }
-function resetGame() { sounds.stop();game=createGame(6);selections={};saveProgress();if(activityDialog.open)closeActivity();if(teacherDialog.open)closeTeacher();render();announce("スタートにもどったよ。はじめからあそべるよ。");toast("はじめから あそべるよ"); }
+function resetGame() { sounds.stop();music.pause({reset:true});game=createGame(6);selections={};saveProgress();if(activityDialog.open)closeActivity();if(teacherDialog.open)closeTeacher();render();announce("スタートにもどったよ。はじめからあそべるよ。");toast("はじめから あそべるよ"); }
 function confirmAction(title,message,action,buttonText) {
   teacherDialog.innerHTML='<div class="confirmation"><h2 id="teacher-title">'+escapeHtml(title)+'</h2><p>'+escapeHtml(message)+'</p><div class="confirmation-buttons"><button class="secondary-button" data-teacher-action="close">もどる</button><button class="primary-button" data-teacher-action="'+action+'">'+escapeHtml(buttonText)+'</button></div></div>';
   if(!teacherDialog.open) teacherDialog.showModal();
 }
 function openHelp() {
-  teacherDialog.innerHTML='<div class="teacher-header"><h2 id="teacher-title">つかいかた</h2><button class="close-button" data-teacher-action="close" aria-label="閉じる">'+icon("close",18)+'</button></div><div class="teacher-content"><ol class="help-list"><li><strong>6人で、ひとつのこまを進めます。</strong><br>順番は黒板の顔カードで確認します。アプリへの名前の入力は不要です。</li><li><strong>サイコロの目は1・2・3。</strong><br>実物のサイコロを振り、出た目のボタンを押します。画面のサイコロも使えます。</li><li><strong>止まったマスの活動をします。</strong><br>代表はサイコロを振った人。友達と取り組むマスでは、声をかけたり指さしたりして相手を選びます。</li><li><strong>活動が終わったら、次の人へ。</strong><br>「かつどう おわり」を押し、ボードの「つぎの ひとへ」で進めます。</li><li><strong>ゴールでは必ず一度止まり、みんなでバンザイ！</strong><br>余った数は持ち越しません。次の人の番で次の周へ進みます。</li><li><strong>6回の活動が終わったら、先生が選びます。</strong><br>黒板の顔カードで全員が1回ずつできたか確認します。時間がなければ拍手でおしまい。時間があれば、次のゴールまで続けられます。</li></ol><div class="help-callout">右上の「大きく表示」で全画面にできます。<br>スピーカーボタンで効果音をオン・オフにできます。移動中も切り替えられます。<br>マスを押すと活動の紹介を見られます。こまは移動しません。<br>「1て もどる」で、直前のサイコロを振る前に戻せます。<br>マスの設定とすごろくの途中経過は、このブラウザーに保存されます。</div></div><div class="settings-footer"><span></span><button class="primary-button" data-teacher-action="close">わかった</button></div>';
+  teacherDialog.innerHTML='<div class="teacher-header"><h2 id="teacher-title">つかいかた</h2><button class="close-button" data-teacher-action="close" aria-label="閉じる">'+icon("close",18)+'</button></div><div class="teacher-content"><ol class="help-list"><li><strong>6人で、ひとつのこまを進めます。</strong><br>順番は黒板の顔カードで確認します。アプリへの名前の入力は不要です。</li><li><strong>サイコロの目は1・2・3。</strong><br>実物のサイコロを振り、出た目のボタンを押します。画面のサイコロも使えます。</li><li><strong>止まったマスの活動をします。</strong><br>代表はサイコロを振った人。友達と取り組むマスでは、声をかけたり指さしたりして相手を選びます。</li><li><strong>活動が終わったら、次の人へ。</strong><br>「かつどう おわり」を押し、ボードの「つぎの ひとへ」で進めます。</li><li><strong>ゴールでは必ず一度止まり、みんなでバンザイ！</strong><br>余った数は持ち越しません。次の人の番で次の周へ進みます。</li><li><strong>6回の活動が終わったら、先生が選びます。</strong><br>黒板の顔カードで全員が1回ずつできたか確認します。時間がなければ拍手でおしまい。時間があれば、次のゴールまで続けられます。</li></ol><div class="help-callout">右上の「大きく表示」で全画面にできます。<br>スピーカーボタンで効果音をオン・オフにできます。移動中も切り替えられます。<br>「BGM 再生」で Carefree が流れます。活動の画面でも一時停止でき、先生の設定の「BGM」で音量を調整できます。<br>マスを押すと活動の紹介を見られます。こまは移動しません。<br>「1て もどる」で、直前のサイコロを振る前に戻せます。<br>マスの設定とすごろくの途中経過は、このブラウザーに保存されます。</div></div><div class="settings-footer"><span></span><button class="primary-button" data-teacher-action="close">わかった</button></div>';
   teacherDialog.showModal();
 }
 function openSettings() {
@@ -293,22 +318,33 @@ function renderSettings() {
   if(settingsTab==="activities") {
     const base=ACTIVITIES[editId-1],edit=settingsDraft.edits[editId]||{};
     content='<div class="field"><label for="edit-square">編集するマス</label><select id="edit-square">'+ACTIVITIES.map(a=>'<option value="'+a.id+'" '+(a.id===editId?"selected":"")+'>'+a.id+'：'+escapeHtml(settingsDraft.edits[a.id]?.title||a.title)+'</option>').join("")+'</select></div><div class="settings-card"><div class="field"><label for="edit-title">マスの名前</label><input id="edit-title" data-edit-field="title" maxlength="50" value="'+escapeHtml(edit.title||base.title)+'"></div><div class="field"><label for="edit-student">大きく表示する活動のことば</label><textarea id="edit-student" data-edit-field="studentText" maxlength="200">'+escapeHtml(edit.studentText||base.studentText)+'</textarea></div><div class="field"><label for="edit-hint">先生のヒント</label><textarea id="edit-hint" data-edit-field="teacherHint" maxlength="1200">'+escapeHtml(edit.teacherHint||base.teacherHint)+'</textarea></div></div><p class="field-help">カードの種類と活動の手順は、今回決めた内容を使います。10番はゴールのままです。</p>';
+  } else if(settingsTab==="audio") {
+    content='<div class="settings-card"><h3 class="settings-card-title">Carefree</h3><p class="teacher-intro">すごろくのあいだ、くり返し流れます。</p>'+musicButtonMarkup()+'</div><div class="field bgm-volume-field"><label for="bgm-volume">BGMの音量 <output id="bgm-volume-output" for="bgm-volume">'+Math.round(settingsDraft.bgmVolume*100)+'%</output></label><input id="bgm-volume" type="range" min="0" max="100" step="5" value="'+Math.round(settingsDraft.bgmVolume*100)+'" aria-describedby="bgm-volume-help"><p class="field-help" id="bgm-volume-help">声や効果音が聞こえる大きさに調整してください。<br>音量は「変更を保存」で記憶します。</p></div><p class="field-help">効果音は、ボードのスピーカーボタンで別に切り替えられます。<br>「おしまい」や「はじめから」でBGMが止まります。別のタブへ移ったときも一時停止します。</p>'+musicCreditsMarkup();
   } else {
     content='<div class="field"><label for="video-url">体操の動画URL（任意）</label><input id="video-url" type="url" placeholder="https://www.youtube.com/watch?v=…" value="'+escapeHtml(settingsDraft.videoUrl)+'"><p class="field-help">設定すると、おしまいの画面に「たいそうを はじめる」ボタンが出ます。</p></div><div class="settings-card"><h3 class="settings-card-title">PowerPointから開く</h3><p class="teacher-intro">スライドの図形に、このアプリのURLをリンクとして設定できます。</p><button class="secondary-button" data-teacher-action="copy-url">アプリのURLをコピー</button></div>';
   }
-  teacherDialog.innerHTML='<div class="teacher-header"><h2 id="teacher-title">先生の設定</h2><button class="close-button" data-teacher-action="close" aria-label="設定を閉じる">'+icon("close",18)+'</button></div><div class="teacher-content"><div class="settings-tabs" role="tablist" aria-label="設定の種類">'+[["activities","マスの内容"],["links","体操・リンク"]].map(t=>'<button role="tab" aria-selected="'+(settingsTab===t[0])+'" data-settings-tab="'+t[0]+'" class="'+(settingsTab===t[0]?"active":"")+'">'+t[1]+'</button>').join("")+'</div>'+content+'</div><div class="settings-footer"><button class="text-button" data-teacher-action="defaults">設定を初期に戻す</button><button class="primary-button" data-teacher-action="save">変更を保存</button></div>';
+  teacherDialog.innerHTML='<div class="teacher-header"><h2 id="teacher-title">先生の設定</h2><button class="close-button" data-teacher-action="close" aria-label="設定を閉じる">'+icon("close",18)+'</button></div><div class="teacher-content"><div class="settings-tabs" role="tablist" aria-label="設定の種類">'+[["activities","マスの内容"],["audio","BGM"],["links","体操・リンク"]].map(t=>'<button role="tab" aria-selected="'+(settingsTab===t[0])+'" data-settings-tab="'+t[0]+'" class="'+(settingsTab===t[0]?"active":"")+'">'+t[1]+'</button>').join("")+'</div>'+content+'</div><div class="settings-footer"><button class="text-button" data-teacher-action="defaults">設定を初期に戻す</button><button class="primary-button" data-teacher-action="save">変更を保存</button></div>';
+  renderMusicButtons();
 }
 function collectSettings() {
   if(!settingsDraft)return;
   if(settingsTab==="activities") {
-    settingsDraft.edits[editId] ||= {};
-    teacherDialog.querySelectorAll("[data-edit-field]").forEach(input=>settingsDraft.edits[editId][input.dataset.editField]=input.value);
+    const base=ACTIVITIES[editId-1],edit={...(settingsDraft.edits[editId]||{})};
+    teacherDialog.querySelectorAll("[data-edit-field]").forEach(input=>{
+      const field=input.dataset.editField;
+      if(input.value===base[field] || input.value==="")delete edit[field];
+      else edit[field]=input.value;
+    });
+    if(Object.keys(edit).length)settingsDraft.edits[editId]=edit;
+    else delete settingsDraft.edits[editId];
   }
   if(settingsTab==="links")settingsDraft.videoUrl=$("video-url").value.trim();
+  if(settingsTab==="audio")settingsDraft.bgmVolume=Number($("bgm-volume").value)/100;
 }
 function commitSettings() {
   settings=normalizeSettings(settingsDraft);
   sounds.setEnabled(settings.effectsEnabled);
+  music.setVolume(settings.bgmVolume);
   const ok=saveSettings();
   closeTeacher();render();
   if(ok)toast("設定を保存しました");
@@ -378,6 +414,9 @@ $("sound-button").addEventListener("click",async()=>{
     else toast("このブラウザーでは効果音を使えません。音なしで遊べます。");
   } else toast("効果音 オフ");
 });
+document.addEventListener("click",e=>{
+  if(e.target.closest("[data-bgm-toggle]")) void music.toggle();
+});
 $("fullscreen-button").addEventListener("click",async()=>{
   try {
     if(document.fullscreenElement)await document.exitFullscreen();
@@ -394,6 +433,13 @@ $("finish-button").addEventListener("click",()=>confirmAction("ここで おし�
 teacherDialog.addEventListener("change",e=>{
   if(e.target.id==="edit-square"){collectSettings();editId=Number(e.target.value);renderSettings();}
 });
+teacherDialog.addEventListener("input",e=>{
+  if(e.target.id==="bgm-volume" && settingsDraft) {
+    settingsDraft.bgmVolume=Number(e.target.value)/100;
+    music.setVolume(settingsDraft.bgmVolume);
+    $("bgm-volume-output").textContent=e.target.value+"%";
+  }
+});
 teacherDialog.addEventListener("click",async e=>{
   const button=e.target.closest("button");if(!button)return;
   if(button.dataset.settingsTab){collectSettings();settingsTab=button.dataset.settingsTab;renderSettings();return;}
@@ -407,14 +453,14 @@ teacherDialog.addEventListener("click",async e=>{
     }
     case "restart":closeTeacher();resetGame();break;
     case "finish":closeTeacher();endGame();break;
-    case "defaults":settingsDraft=defaultSettings();renderSettings();toast("初期の設定に戻しました。「変更を保存」で確定します。");break;
+    case "defaults":settingsDraft=defaultSettings();music.setVolume(settingsDraft.bgmVolume);renderSettings();toast("初期の設定に戻しました。「変更を保存」で確定します。");break;
     case "copy-url":
       try{await navigator.clipboard.writeText(new URL(".",location.href).href);toast("URLをコピーしました");}
       catch{toast("ブラウザーのアドレス欄からURLをコピーしてください。");}
       break;
   }
 });
-teacherDialog.addEventListener("cancel",()=>{settingsDraft=null;});
+teacherDialog.addEventListener("cancel",()=>{settingsDraft=null;music.setVolume(settings.bgmVolume);});
 document.addEventListener("keydown",e=>{
   if(activityDialog.open||teacherDialog.open||e.altKey||e.ctrlKey||e.metaKey||e.target.matches("input,textarea,select"))return;
   if(/^[123]$/.test(e.key)){e.preventDefault();roll(Number(e.key));}

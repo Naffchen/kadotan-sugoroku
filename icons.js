@@ -18,6 +18,7 @@ const art = {
   dice:'<rect x="9" y="9" width="46" height="46" rx="10" fill="none"/><circle cx="22" cy="22" r="4" fill="currentColor" stroke="none"/><circle cx="32" cy="32" r="4" fill="currentColor" stroke="none"/><circle cx="42" cy="42" r="4" fill="currentColor" stroke="none"/>',
   star:'<path d="m32 7 8 16 18 3-13 13 3 18-16-9-16 9 3-18L6 26l18-3z" fill="none"/>',
   play:'<path d="m22 12 30 20-30 20z" fill="currentColor" stroke="none"/>',
+  music:'<path d="M25 45V15l28-6v30M25 23l28-6" fill="none"/><ellipse cx="17" cy="47" rx="8" ry="6" fill="currentColor" stroke="none"/><ellipse cx="45" cy="41" rx="8" ry="6" fill="currentColor" stroke="none"/>',
   hands:'<path d="m18 42-7-17c-2-5 3-6 5-2l4 8-6-17c-2-5 4-6 6-1l6 15-3-19c-1-5 5-6 6-1l3 18 2-14c1-5 7-4 6 1l-1 22 8-5c5-3 9 2 5 6L39 52c-11 9-18 1-21-10z" fill="#fff"/>',
 };
 export function icon(name, size=32) {

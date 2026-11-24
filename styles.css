@@ -20,7 +20,21 @@ a{color:inherit}
 .brand-mark span:nth-child(3){align-self:end;margin-bottom:8px}
 .brand-kicker{display:block;font-size:13px;line-height:1.3;letter-spacing:.04em;font-weight:700;color:#605185}
 h1{font-size:27px;line-height:1.2;margin:1px 0 0;font-weight:900;letter-spacing:.025em}
-.toolbar{display:flex;gap:8px;align-items:center}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.bgm-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:43px;padding:8px 11px;background:#fff0f8;border:2px solid #d5a2c7;border-radius:13px;font-size:18px;font-weight:800;line-height:1.2;white-space:nowrap}
+.bgm-button:hover{background:#f8dff0;border-color:#af72a2}
+.bgm-button[aria-pressed=true]{background:#e0f6e9;border-color:#29845f;color:#17633f}
+.bgm-button.compact{min-height:38px;padding:6px 9px;font-size:16px}
+.dialog-tools{display:flex;align-items:center;gap:9px;margin-left:auto}
+.dialog-top{flex-wrap:wrap;gap:9px}
+.bgm-volume-field{margin-top:24px}
+.bgm-volume-field label{display:flex;justify-content:space-between;gap:20px}
+.bgm-volume-field output{color:var(--green);font-variant-numeric:tabular-nums}
+.bgm-credits{margin-top:24px;padding:16px 18px;border:1px solid var(--line);border-radius:15px;background:#f2f6ff;font-size:16px;line-height:1.7;overflow-wrap:anywhere}
+.bgm-credits h3{font-size:19px;margin:0 0 8px}
+.bgm-credits p{margin:8px 0}
+.bgm-credits a{color:#35529b;text-underline-offset:3px}
+.field input[type=range]{width:100%;min-height:44px;margin:9px 0;padding:0;border:0;accent-color:var(--green);cursor:pointer}
 .icon-button{display:inline-flex;align-items:center;justify-content:center;background:white;border:2px solid #cbd6e8;border-radius:13px;width:43px;min-height:43px}
 .icon-button:hover{background:#e6edff;border-color:#8a8fcd}
 .icon-button[aria-pressed=true]{background:#e2dcff;border-color:var(--green)}
@@ -244,6 +258,7 @@ dialog::backdrop{background:#1f2b4c8c;backdrop-filter:blur(4px)}
 .square-picture svg{width:70px;height:70px}.square-title{font-size:26px}
 }
 @media(max-width:1000px){
+.bgm-button{font-size:16px;padding:8px 9px}
 .app-header{gap:12px}.brand{gap:10px}.brand-mark{width:37px;height:37px}h1{font-size:24px}.toolbar{gap:5px}.settings-button,.fullscreen-button{font-size:16px;padding:8px 10px}
 .game-heading{margin:11px 0 8px}.game-heading h2{font-size:26px}
 .board{height:auto;grid-template-rows:repeat(2,minmax(184px,1fr));gap:21px 12px}
@@ -283,6 +298,7 @@ dialog::backdrop{background:#1f2b4c8c;backdrop-filter:blur(4px)}
 .help-list{font-size:19px}.help-callout{font-size:17px}.confirmation{padding:27px 20px}.confirmation h2{font-size:28px}.confirmation-buttons{flex-direction:column}
 }
 @media(max-width:440px){
+.toolbar{flex-wrap:wrap}.bgm-button{font-size:15px;min-height:40px;padding:8px}.dialog-tools{gap:7px}
 .toolbar{width:100%;justify-content:flex-end}.brand-mark{width:37px;height:37px}.icon-button{width:40px;min-height:40px}.fullscreen-button{width:auto}.settings-button,.fullscreen-button{min-height:40px;font-size:15px;padding:8px;gap:5px}
 .game-heading{align-items:flex-start}.game-heading h2{font-size:21px;line-height:1.4}.lap-badge{font-size:16px}.square-title{font-size:23px}.square-kind{font-size:14px}.square-num{width:29px;height:29px;font-size:22px}
 .dice-panel{--dice-panel-height:214px}.dice-panel:has(.dice-options){display:flex;gap:9px}.dice-options{width:100%;gap:10px}.random-button{width:100%;min-height:48px;font-size:18px}.kadotan-note>div{gap:8px}.kadotan-note p{font-size:16px}

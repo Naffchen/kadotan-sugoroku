@@ -1,0 +1,27 @@
+"Carefree" Kevin MacLeod (incompetech.com)
+Licensed under Creative Commons: By Attribution 4.0 License
+https://creativecommons.org/licenses/by/4.0/
+
+Original track / 配布元:
+https://incompetech.com/music/royalty-free/index.html?Search=Search&isrc=USUAN1400037
+
+Author / 作者:
+Kevin MacLeod
+https://incompetech.com/
+
+License legal code / ライセンス全文:
+https://creativecommons.org/licenses/by/4.0/legalcode.en
+
+File / 対象ファイル:
+assets/Carefree.mp3
+ISRC: USUAN1400037
+
+Changes / 変更:
+The supplied audio file has not been edited, re-encoded, or trimmed.
+The app adjusts playback volume and repeats the track using its audio player.
+音源ファイルは未編集です。アプリで再生音量を調整し、繰り返し再生します。
+
+The CC BY 4.0 license applies to Carefree.mp3. Other application files and
+the school mascot have their own rights; this notice does not license them.
+CC BY 4.0はCarefree.mp3に適用されます。この表記は、アプリ本体や学校
+キャラクターのライセンスを定めるものではありません。
